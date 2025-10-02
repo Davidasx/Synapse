@@ -1,0 +1,31 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 120 120" role="img" aria-labelledby="titleA descA">
+  <title id="titleA">Synapse logo — yellow folder with synapse nodes</title>
+  <desc id="descA">A taller yellow folder with three connected nodes forming a synapse, representing privacy-first smart file management.</desc>
+
+  <!-- gradient for synapse -->
+  <defs>
+    <linearGradient id="gA" x1="0" x2="1">
+      <stop offset="0" stop-color="#0F9D9A"/>
+      <stop offset="1" stop-color="#13B4AA"/>
+    </linearGradient>
+  </defs>
+
+  <!-- folder body -->
+  <path d="M12 30h34l8 8h54v60a8 8 0 0 1-8 8H20a8 8 0 0 1-8-8V38a8 8 0 0 1 8-8z"
+        fill="#F4C542"/>
+  <!-- folder top flap (slightly darker for depth) -->
+  <path d="M12 30h34l8 8h54v8H20a8 8 0 0 1-8-8z"
+        fill="#D9A92F"/>
+
+  <!-- synapse lines (vertical S-shape) -->
+  <g fill="none" stroke="url(#gA)" stroke-linecap="round" stroke-linejoin="round" stroke-width="3">
+    <path d="M70 40 C50 50, 50 60, 60 70 C70 80, 70 90, 50 100" />
+  </g>
+
+  <!-- synapse nodes -->
+  <g>
+    <circle cx="70" cy="40" r="4.5" fill="#0F9D9A" stroke="#333" stroke-width="1"/>
+    <circle cx="60" cy="70" r="6" fill="#13B4AA" stroke="#333" stroke-width="1"/>
+    <circle cx="50" cy="100" r="4.5" fill="#0F9D9A" stroke="#333" stroke-width="1"/>
+  </g>
+</svg>
