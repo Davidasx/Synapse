@@ -41,6 +41,9 @@ const i18n = {
 
     // Apply translations to the DOM
     applyTranslations() {
+        // Update document title
+        document.title = this.t("pageTitle");
+
         // Update all elements with data-i18n attribute
         document.querySelectorAll("[data-i18n]").forEach((element) => {
             const key = element.getAttribute("data-i18n");

@@ -9,6 +9,7 @@ let currentSettings = {
     language: "en",
     storagePath: "",
 };
+let hasPassword = false; // Track if password is set
 
 // i18n helper function
 function t(key) {
@@ -19,11 +20,48 @@ function t(key) {
 document.addEventListener("DOMContentLoaded", async () => {
     await loadSettings();
     await window.i18n.init(currentSettings.language);
-    await loadFiles();
+
     setupEventListeners();
+    setupExternalLinks();
     applyTheme();
     window.i18n.applyTranslations();
+
+    // Check encryption status
+    const encStatus = await checkEncryptionStatus();
+
+    // Update password UI based on encryption status
+    await checkPasswordStatus();
+
+    // If app is locked, show unlock dialog
+    if (encStatus && encStatus.isLocked) {
+        console.log("App is locked, showing unlock dialog");
+        document.querySelector(".app-container").style.display = "none";
+        showPasswordEntryDialog();
+    } else {
+        console.log("App is unlocked, loading files");
+        await loadFiles();
+    }
 });
+
+// Setup external links to open in system browser
+function setupExternalLinks() {
+    // Find all links with target="_blank" or external URLs
+    document.addEventListener("click", (e) => {
+        const link = e.target.closest("a[href]");
+        if (!link) return;
+
+        const href = link.getAttribute("href");
+
+        // Check if it's an external link (http/https)
+        if (
+            href &&
+            (href.startsWith("http://") || href.startsWith("https://"))
+        ) {
+            e.preventDefault();
+            window.electronAPI.openExternalLink(href);
+        }
+    });
+}
 
 // Setup event listeners
 function setupEventListeners() {
@@ -91,6 +129,24 @@ function setupEventListeners() {
         }
     });
 
+    // About button
+    document.getElementById("aboutBtn").addEventListener("click", openAbout);
+
+    // About modal close buttons
+    document
+        .querySelector(".about-modal-close")
+        .addEventListener("click", closeAbout);
+    document
+        .getElementById("closeAboutBtn")
+        .addEventListener("click", closeAbout);
+
+    // About modal background click
+    document.getElementById("aboutModal").addEventListener("click", (e) => {
+        if (e.target.id === "aboutModal") {
+            closeAbout();
+        }
+    });
+
     // Settings button
     document
         .getElementById("settingsBtn")
@@ -130,6 +186,77 @@ function setupEventListeners() {
     document
         .getElementById("changeStorageBtn")
         .addEventListener("click", changeStorageLocation);
+
+    // Password/Security buttons
+    document
+        .getElementById("changePasswordBtn")
+        .addEventListener("click", openPasswordSetup);
+
+    // Password setup modal close
+    document
+        .querySelector(".password-setup-modal-close")
+        .addEventListener("click", closePasswordSetup);
+    document
+        .getElementById("cancelPasswordBtn")
+        .addEventListener("click", closePasswordSetup);
+
+    // Password setup modal background click
+    document
+        .getElementById("passwordSetupModal")
+        .addEventListener("click", (e) => {
+            if (e.target.id === "passwordSetupModal") {
+                closePasswordSetup();
+            }
+        });
+
+    // Save password button
+    document
+        .getElementById("savePasswordBtn")
+        .addEventListener("click", savePassword);
+
+    // Remove password checkbox
+    document
+        .getElementById("removePasswordCheckbox")
+        .addEventListener("change", (e) => {
+            const passwordInputs = document.querySelectorAll(
+                "#newPasswordInput, #confirmPasswordInput"
+            );
+            passwordInputs.forEach((input) => {
+                input.disabled = e.target.checked;
+                if (e.target.checked) {
+                    input.value = "";
+                }
+            });
+        });
+
+    // Password entry modal buttons (startup)
+    document.getElementById("unlockBtn").addEventListener("click", unlockApp);
+    document.getElementById("quitAppBtn").addEventListener("click", quitApp);
+
+    // Enter key in password inputs
+    document
+        .getElementById("startupPasswordInput")
+        .addEventListener("keypress", (e) => {
+            if (e.key === "Enter") {
+                unlockApp();
+            }
+        });
+
+    document
+        .getElementById("newPasswordInput")
+        .addEventListener("keypress", (e) => {
+            if (e.key === "Enter") {
+                document.getElementById("confirmPasswordInput").focus();
+            }
+        });
+
+    document
+        .getElementById("confirmPasswordInput")
+        .addEventListener("keypress", (e) => {
+            if (e.key === "Enter") {
+                savePassword();
+            }
+        });
 }
 
 // Load files from storage
@@ -160,7 +287,7 @@ async function addFile() {
             allFiles.push(result.file);
             renderFiles();
             updateStats();
-            showNotification("File added successfully!", "success");
+            showNotification(t("fileAddedSuccess"), "success");
             // Open tag editor for the newly added file
             openTagEditor(result.file.id);
         } else if (result.message !== "No file selected") {
@@ -223,6 +350,21 @@ async function showInFolder(fileId) {
     }
 }
 
+// Save file to another location
+async function saveFile(fileId) {
+    try {
+        const result = await window.electronAPI.saveFile(fileId);
+        if (result.success) {
+            showNotification(t("fileSavedSuccess"), "success");
+        } else if (result.message !== "Save canceled") {
+            showNotification("Failed to save file: " + result.message, "error");
+        }
+    } catch (error) {
+        console.error("Error saving file:", error);
+        showNotification("Failed to save file", "error");
+    }
+}
+
 // Open tag editor
 function openTagEditor(fileId) {
     const file = allFiles.find((f) => f.id === fileId);
@@ -263,12 +405,12 @@ function attachFileCardListeners() {
             });
         }
 
-        // Folder button
-        const folderBtn = card.querySelector(".folder-btn");
-        if (folderBtn) {
-            folderBtn.addEventListener("click", (e) => {
+        // Save button
+        const saveBtn = card.querySelector(".save-btn");
+        if (saveBtn) {
+            saveBtn.addEventListener("click", (e) => {
                 e.stopPropagation();
-                showInFolder(fileId);
+                saveFile(fileId);
             });
         }
 
@@ -359,7 +501,7 @@ async function saveTags() {
             renderFiles();
             updateStats();
             closeTagModal();
-            showNotification("Tags updated successfully!", "success");
+            showNotification(t("tagsUpdatedSuccess"), "success");
         } else {
             showNotification(
                 "Failed to update tags: " + result.message,
@@ -409,11 +551,13 @@ function renderFiles() {
                 <line x1="7" y1="7" x2="7.01" y2="7"/>
               </svg>
             </button>
-            <button class="icon-btn folder-btn" data-file-id="${
+            <button class="icon-btn save-btn" data-file-id="${
                 file.id
-            }" title="Show in folder">
+            }" title="Save file to another location">
               <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                <path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"/>
+                <path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"/>
+                <polyline points="17 21 17 13 7 13 7 21"/>
+                <polyline points="7 3 7 8 15 8"/>
               </svg>
             </button>
             <button class="icon-btn danger delete-btn" data-file-id="${
@@ -659,13 +803,106 @@ function escapeHtml(text) {
     return div.innerHTML;
 }
 
-// Show notification (simple version - you can enhance this)
+// Show notification with toast
 function showNotification(message, type = "info") {
-    console.log(`[${type.toUpperCase()}] ${message}`);
-    // You could implement a toast notification system here
-    if (type === "error") {
-        alert(message);
+    const container = document.getElementById("toastContainer");
+    if (!container) {
+        console.error("Toast container not found");
+        return;
     }
+
+    // Create toast element
+    const toast = document.createElement("div");
+    toast.className = `toast toast-${type}`;
+
+    // Get icon based on type
+    const icons = {
+        success: `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <polyline points="20 6 9 17 4 12"/>
+                  </svg>`,
+        error: `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                  <circle cx="12" cy="12" r="10"/>
+                  <line x1="15" y1="9" x2="9" y2="15"/>
+                  <line x1="9" y1="9" x2="15" y2="15"/>
+                </svg>`,
+        warning: `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/>
+                    <line x1="12" y1="9" x2="12" y2="13"/>
+                    <line x1="12" y1="17" x2="12.01" y2="17"/>
+                  </svg>`,
+        info: `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                 <circle cx="12" cy="12" r="10"/>
+                 <line x1="12" y1="16" x2="12" y2="12"/>
+                 <line x1="12" y1="8" x2="12.01" y2="8"/>
+               </svg>`,
+    };
+
+    toast.innerHTML = `
+        <div class="toast-icon">
+            ${icons[type] || icons.info}
+        </div>
+        <div class="toast-content">
+            <div class="toast-message">${escapeHtml(message)}</div>
+        </div>
+        <button class="toast-close">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <path d="M18 6L6 18M6 6l12 12"/>
+            </svg>
+        </button>
+    `;
+
+    // Add close button handler
+    const closeBtn = toast.querySelector(".toast-close");
+    closeBtn.addEventListener("click", () => {
+        removeToast(toast);
+    });
+
+    // Add to container
+    container.appendChild(toast);
+
+    // Auto remove after 5 seconds
+    setTimeout(() => {
+        removeToast(toast);
+    }, 5000);
+}
+
+// Remove toast with animation
+function removeToast(toast) {
+    if (!toast || !toast.parentElement) return;
+
+    toast.classList.add("toast-hiding");
+    setTimeout(() => {
+        if (toast.parentElement) {
+            toast.parentElement.removeChild(toast);
+        }
+    }, 300);
+}
+
+// About functions
+
+// Open about modal
+async function openAbout() {
+    // Fetch and display app version
+    try {
+        const versionResult = await window.electronAPI.getAppVersion();
+        if (versionResult.success) {
+            const versionElement = document.querySelector(".about-version");
+            if (versionElement) {
+                // Get the translated "Version" text
+                const versionLabel = t("aboutVersion");
+                versionElement.textContent = `${versionLabel} ${versionResult.version}`;
+            }
+        }
+    } catch (error) {
+        console.error("Error fetching app version:", error);
+    }
+
+    document.getElementById("aboutModal").classList.add("visible");
+}
+
+// Close about modal
+function closeAbout() {
+    document.getElementById("aboutModal").classList.remove("visible");
 }
 
 // Settings functions
@@ -757,13 +994,14 @@ async function setLanguage(language) {
 async function changeStorageLocation() {
     try {
         const result = await window.electronAPI.changeStorageLocation();
-        if (result.success) {
-            currentSettings.storagePath = result.path;
-            updateSettingsUI();
-            saveSettings();
+        if (result.success && result.needsMigration) {
+            // Don't close settings modal - let user see what's happening
+            // Start migration process
+            await startMigration(result.oldPath, result.path);
+        } else if (result.message === "Same location selected") {
             showNotification(
-                "Storage location updated. Please restart the app.",
-                "success"
+                t("sameLocationSelected") || "Same location selected",
+                "warning"
             );
         } else if (result.message !== "No folder selected") {
             showNotification(
@@ -775,4 +1013,522 @@ async function changeStorageLocation() {
         console.error("Error changing storage location:", error);
         showNotification("Failed to change storage location", "error");
     }
+}
+
+// Show progress modal with title and message
+function showProgressModal(title, message) {
+    const modal = document.getElementById("progressModal");
+    const modalTitle = document.getElementById("progressModalTitle");
+    const progressFill = document.getElementById("progressFill");
+    const progressText = document.getElementById("progressText");
+    const progressMessage = document.getElementById("progressMessage");
+
+    modalTitle.textContent = title;
+    progressMessage.textContent = message;
+    progressFill.style.width = "0%";
+    progressText.textContent = "0%";
+
+    modal.classList.add("visible");
+}
+
+// Update progress modal
+function updateProgressModal(progress, message) {
+    const progressFill = document.getElementById("progressFill");
+    const progressText = document.getElementById("progressText");
+    const progressMessage = document.getElementById("progressMessage");
+
+    progressFill.style.width = `${progress}%`;
+    progressText.textContent = `${progress}%`;
+    if (message) {
+        progressMessage.textContent = message;
+    }
+}
+
+// Hide progress modal
+function hideProgressModal() {
+    const modal = document.getElementById("progressModal");
+    modal.classList.remove("visible");
+}
+
+// Start migration process
+async function startMigration(oldPath, newPath) {
+    // Show progress modal
+    showProgressModal(
+        t("migrationTitle") || "Migrating Data",
+        t("migrationDescription") || "Preparing migration..."
+    );
+
+    // Listen for progress updates
+    window.electronAPI.onMigrationProgress((progress) => {
+        // Calculate overall progress
+        let overallProgress = 0;
+        let message = progress.message || "";
+
+        if (progress.stage === "metadata") {
+            overallProgress = progress.progress * 0.2; // Metadata is 20% of total
+        } else if (progress.stage === "files") {
+            overallProgress = 20 + progress.progress * 0.8; // Files are 80% of total
+            if (progress.current && progress.total) {
+                message = `${message} (${progress.current}/${progress.total})`;
+            }
+        } else if (progress.stage === "complete") {
+            overallProgress = 100;
+            message = t("migrationComplete") || "Migration complete!";
+        } else if (progress.stage === "error") {
+            message = t("migrationError") || "Error: " + progress.message;
+        }
+
+        updateProgressModal(Math.round(overallProgress), message);
+    });
+
+    try {
+        // Start migration
+        const result = await window.electronAPI.startMigration(
+            oldPath,
+            newPath
+        );
+
+        if (result.success) {
+            // Migration complete
+            showNotification(
+                t("migrationComplete") || "Migration completed successfully!",
+                "success"
+            );
+
+            // Update settings
+            currentSettings.storagePath = newPath;
+            updateSettingsUI();
+
+            // Wait a bit before closing modal
+            setTimeout(() => {
+                hideProgressModal();
+                window.electronAPI.removeMigrationProgressListener();
+
+                // Reload files
+                loadFiles();
+            }, 2000);
+        } else {
+            showNotification(
+                t("migrationFailed") || "Migration failed: " + result.message,
+                "error"
+            );
+
+            setTimeout(() => {
+                hideProgressModal();
+                window.electronAPI.removeMigrationProgressListener();
+            }, 3000);
+        }
+    } catch (error) {
+        console.error("Migration error:", error);
+        showNotification("Migration failed: " + error.message, "error");
+
+        setTimeout(() => {
+            hideProgressModal();
+            window.electronAPI.removeMigrationProgressListener();
+        }, 3000);
+    }
+}
+
+// Password/Security functions
+
+// Check if password is set
+async function checkPasswordStatus() {
+    try {
+        // Use encryption manager to check password status
+        const status = await window.electronAPI.getEncryptionStatus();
+        if (status.success) {
+            hasPassword = status.hasPassword;
+            updatePasswordUI();
+        }
+    } catch (error) {
+        console.error("Error checking password status:", error);
+    }
+}
+
+// Update password UI in settings
+function updatePasswordUI() {
+    const button = document.getElementById("changePasswordBtn");
+    const description = document.getElementById("passwordStatusDesc");
+
+    if (hasPassword) {
+        button.textContent = t("settingsChangePassword") || "Change Password";
+        description.textContent =
+            t("passwordStatusEnabled") || "Password protection is enabled";
+    } else {
+        button.textContent = t("settingsSetPassword") || "Set Password";
+        description.textContent =
+            t("settingsPasswordDesc") ||
+            "Require password to access the application";
+    }
+}
+
+// Open password setup modal
+function openPasswordSetup() {
+    const modal = document.getElementById("passwordSetupModal");
+    const title = document.getElementById("passwordSetupTitle");
+    const currentPasswordGroup = document.getElementById(
+        "currentPasswordGroup"
+    );
+    const removePasswordGroup = document.getElementById("removePasswordGroup");
+    const saveBtn = document.getElementById("savePasswordBtn");
+
+    // Clear all inputs
+    document.getElementById("currentPasswordInput").value = "";
+    document.getElementById("newPasswordInput").value = "";
+    document.getElementById("confirmPasswordInput").value = "";
+    document.getElementById("removePasswordCheckbox").checked = false;
+
+    // Enable password inputs
+    document.getElementById("newPasswordInput").disabled = false;
+    document.getElementById("confirmPasswordInput").disabled = false;
+
+    if (hasPassword) {
+        // Changing existing password
+        title.textContent = t("passwordChangeTitle") || "Change Password";
+        currentPasswordGroup.style.display = "block";
+        removePasswordGroup.style.display = "block";
+        saveBtn.textContent = t("savePassword") || "Save Password";
+    } else {
+        // Setting new password
+        title.textContent = t("passwordSetupTitle") || "Set Password";
+        currentPasswordGroup.style.display = "none";
+        removePasswordGroup.style.display = "none";
+        saveBtn.textContent = t("savePassword") || "Save Password";
+    }
+
+    modal.classList.add("visible");
+
+    // Focus appropriate input
+    setTimeout(() => {
+        if (hasPassword) {
+            document.getElementById("currentPasswordInput").focus();
+        } else {
+            document.getElementById("newPasswordInput").focus();
+        }
+    }, 100);
+}
+
+// Close password setup modal
+function closePasswordSetup() {
+    document.getElementById("passwordSetupModal").classList.remove("visible");
+}
+
+// Save password
+async function savePassword() {
+    const currentPassword = document.getElementById(
+        "currentPasswordInput"
+    ).value;
+    const newPassword = document.getElementById("newPasswordInput").value;
+    const confirmPassword = document.getElementById(
+        "confirmPasswordInput"
+    ).value;
+    const removePassword = document.getElementById(
+        "removePasswordCheckbox"
+    ).checked;
+
+    try {
+        // If removing password
+        if (removePassword && hasPassword) {
+            if (!currentPassword) {
+                showNotification(
+                    t("passwordRequired") || "Password is required",
+                    "warning"
+                );
+                return;
+            }
+
+            // Use new encryption system
+            const result = await window.electronAPI.removeEncryptionPassword(
+                currentPassword
+            );
+            if (result.success) {
+                hasPassword = false;
+                updatePasswordUI();
+                closePasswordSetup();
+                showNotification(
+                    t("passwordRemoveSuccess") ||
+                        "Password removed successfully!",
+                    "success"
+                );
+            } else {
+                showNotification(
+                    t("currentPasswordIncorrect") ||
+                        "Current password is incorrect",
+                    "error"
+                );
+            }
+            return;
+        }
+
+        // Validate new password
+        if (!newPassword) {
+            showNotification(
+                t("passwordRequired") || "Password is required",
+                "warning"
+            );
+            return;
+        }
+
+        if (newPassword.length < 6) {
+            showNotification(
+                t("passwordTooShort") ||
+                    "Password must be at least 6 characters",
+                "warning"
+            );
+            return;
+        }
+
+        if (newPassword !== confirmPassword) {
+            showNotification(
+                t("passwordMismatch") || "Passwords do not match",
+                "warning"
+            );
+            return;
+        }
+
+        // Use new encryption system
+        const result = await window.electronAPI.setEncryptionPassword(
+            newPassword,
+            hasPassword ? currentPassword : null
+        );
+
+        if (result.success) {
+            const wasSet = hasPassword;
+            closePasswordSetup();
+
+            // If needs re-encryption of all files
+            if (result.needsReEncryption) {
+                await reEncryptAllFiles();
+            }
+
+            hasPassword = true;
+            updatePasswordUI();
+
+            if (wasSet) {
+                showNotification(
+                    t("passwordChangeSuccess") ||
+                        "Password changed successfully!",
+                    "success"
+                );
+            } else {
+                showNotification(
+                    t("passwordSetSuccess") || "Password set successfully!",
+                    "success"
+                );
+            }
+        } else {
+            if (result.error && result.error.includes("password")) {
+                showNotification(
+                    t("currentPasswordIncorrect") ||
+                        "Current password is incorrect",
+                    "error"
+                );
+            } else {
+                showNotification(
+                    "Failed to save password: " +
+                        (result.error || result.message),
+                    "error"
+                );
+            }
+        }
+    } catch (error) {
+        console.error("Error saving password:", error);
+        showNotification("Failed to save password", "error");
+    }
+}
+
+// Show password entry dialog on startup
+function showPasswordEntryDialog() {
+    console.log("showPasswordEntryDialog called");
+    const modal = document.getElementById("passwordEntryModal");
+    const input = document.getElementById("startupPasswordInput");
+    const errorDiv = document.getElementById("passwordError");
+
+    if (!modal) {
+        console.error("Password entry modal not found!");
+        return;
+    }
+
+    console.log("Modal found, showing password dialog");
+
+    // Clear input and error
+    input.value = "";
+    errorDiv.style.display = "none";
+
+    // Show modal (can't be closed by clicking outside)
+    modal.classList.add("visible");
+    modal.style.pointerEvents = "all"; // Make sure modal blocks interaction
+
+    console.log("Modal classes:", modal.className);
+    console.log("Modal display:", window.getComputedStyle(modal).display);
+
+    // Focus input
+    setTimeout(() => {
+        input.focus();
+    }, 100);
+}
+
+// Unlock app with password (supports both old and new encryption system)
+async function unlockApp() {
+    const input = document.getElementById("startupPasswordInput");
+    const errorDiv = document.getElementById("passwordError");
+    const password = input.value;
+
+    if (!password) {
+        errorDiv.style.display = "block";
+        errorDiv.querySelector("span").textContent =
+            t("passwordRequired") || "Password is required";
+        return;
+    }
+
+    try {
+        // Use encryption system to unlock
+        const result = await window.electronAPI.unlockApp(password);
+
+        if (result.success) {
+            // Password correct - hide modal and show app content
+            document
+                .getElementById("passwordEntryModal")
+                .classList.remove("visible");
+            document.querySelector(".app-container").style.display = "block";
+
+            // Load files now that user is authenticated
+            await loadFiles();
+        } else {
+            // Password incorrect - show error
+            errorDiv.style.display = "block";
+            errorDiv.querySelector("span").textContent =
+                t("incorrectPassword") ||
+                "Incorrect password. Please try again.";
+            input.value = "";
+            input.focus();
+        }
+    } catch (error) {
+        console.error("Error unlocking app:", error);
+        showNotification("Failed to unlock application", "error");
+    }
+}
+
+// Quit application
+async function quitApp() {
+    try {
+        await window.electronAPI.quitApp();
+    } catch (error) {
+        console.error("Error quitting app:", error);
+    }
+}
+
+// ========== NEW ENCRYPTION SYSTEM ==========
+
+// Check encryption status on app load
+async function checkEncryptionStatus() {
+    try {
+        const status = await window.electronAPI.getEncryptionStatus();
+        if (status.success) {
+            console.log("Encryption status:", status);
+
+            // If locked, show unlock dialog
+            if (status.isLocked) {
+                showUnlockDialog();
+            }
+
+            return status;
+        }
+    } catch (error) {
+        console.error("Error checking encryption status:", error);
+    }
+    return null;
+}
+
+// Show unlock dialog for encrypted app
+function showUnlockDialog() {
+    // Hide main content
+    document.querySelector(".app-container").style.display = "none";
+
+    // Show unlock dialog (reuse existing password entry modal)
+    showPasswordEntryDialog();
+}
+
+// Enhanced password setup to support new encryption system
+// Re-encrypt all files with progress tracking
+async function reEncryptAllFiles() {
+    showProgressModal(
+        t("reEncryptingFiles") || "Re-encrypting Files",
+        t("pleaseWait") || "Please wait while we secure your files..."
+    );
+
+    // Listen for progress updates
+    window.electronAPI.onReEncryptionProgress((progress) => {
+        updateProgressModal(
+            progress.percentage,
+            `${t("processing") || "Processing"} ${progress.current} / ${
+                progress.total
+            }`
+        );
+    });
+
+    try {
+        const result = await window.electronAPI.reEncryptAllFiles();
+
+        if (result.success) {
+            updateProgressModal(100, t("complete") || "Complete!");
+            setTimeout(() => {
+                closeProgressModal();
+                showNotification(
+                    t("reEncryptionSuccess") ||
+                        "All files have been secured with the new password",
+                    "success"
+                );
+            }, 1000);
+        } else {
+            closeProgressModal();
+            showNotification(
+                t("reEncryptionError") ||
+                    "Some files could not be re-encrypted",
+                "error"
+            );
+            if (result.errors) {
+                console.error("Re-encryption errors:", result.errors);
+            }
+        }
+    } catch (error) {
+        console.error("Error re-encrypting files:", error);
+        closeProgressModal();
+        showNotification(
+            t("reEncryptionError") || "Failed to re-encrypt files",
+            "error"
+        );
+    } finally {
+        window.electronAPI.removeReEncryptionProgressListener();
+    }
+}
+
+// Lock the application
+async function lockApp() {
+    try {
+        const result = await window.electronAPI.lockApp();
+        if (result.success) {
+            // Hide main content and show unlock dialog
+            showUnlockDialog();
+            showNotification(t("appLocked") || "Application locked", "success");
+        } else {
+            showNotification(
+                result.error || t("lockFailed") || "Failed to lock application",
+                "error"
+            );
+        }
+    } catch (error) {
+        console.error("Error locking app:", error);
+        showNotification(
+            t("lockFailed") || "Failed to lock application",
+            "error"
+        );
+    }
+}
+
+// Enhanced unlock to work with new encryption system
+// Close progress modal
+function closeProgressModal() {
+    const modal = document.getElementById("progressModal");
+    modal.classList.remove("visible");
 }
