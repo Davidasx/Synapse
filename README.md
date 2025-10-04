@@ -60,20 +60,6 @@ npm run build:linux  # Linux
 5. Files are categorized automatically based on their format
 6. All data stays local - no cloud, no tracking
 
-## Project Structure
-
-```
-Synapse/
-├── src/
-│   ├── main/           # Electron main process
-│   ├── preload/        # Preload scripts
-│   └── renderer/       # UI (HTML, CSS, JS)
-│       └── i18n/       # Internationalization
-├── build/              # Build resources (icons)
-├── dist/               # Built applications (generated)
-├── package.json        # Dependencies and build config
-```
-
 ## Future Enhancements
 
 -   AI-powered automatic tagging

@@ -1,6 +1,7 @@
 // Global state
 let allFiles = [];
 let currentEditingFile = null;
+let currentRenamingFile = null;
 let currentTags = [];
 let currentFilter = "all";
 let currentSearchTerm = "";
@@ -73,6 +74,26 @@ function setupEventListeners() {
         .getElementById("emptyStateAddFileBtn")
         .addEventListener("click", addFile);
 
+    // Toggle password visibility buttons
+    document.querySelectorAll(".toggle-password-btn").forEach((btn) => {
+        btn.addEventListener("click", function () {
+            const targetId = this.getAttribute("data-target");
+            const input = document.getElementById(targetId);
+            const eyeIcon = this.querySelector(".eye-icon");
+            const eyeOffIcon = this.querySelector(".eye-off-icon");
+
+            if (input.type === "password") {
+                input.type = "text";
+                eyeIcon.style.display = "none";
+                eyeOffIcon.style.display = "block";
+            } else {
+                input.type = "password";
+                eyeIcon.style.display = "block";
+                eyeOffIcon.style.display = "none";
+            }
+        });
+    });
+
     // Search input
     document.getElementById("searchInput").addEventListener("input", (e) => {
         currentSearchTerm = e.target.value.toLowerCase();
@@ -114,7 +135,7 @@ function setupEventListeners() {
 
     // Modal close button
     document
-        .querySelector(".modal-close")
+        .querySelector(".tag-modal-close")
         .addEventListener("click", closeTagModal);
 
     // Modal cancel and save buttons (Tag Modal)
@@ -126,6 +147,31 @@ function setupEventListeners() {
             btn.addEventListener("click", closeTagModal);
         } else if (btn.classList.contains("btn-primary")) {
             btn.addEventListener("click", saveTags);
+        }
+    });
+
+    // Rename modal close buttons
+    document
+        .querySelector(".rename-modal-close")
+        .addEventListener("click", closeRenameModal);
+    document
+        .getElementById("cancelRenameBtn")
+        .addEventListener("click", closeRenameModal);
+    document
+        .getElementById("saveRenameBtn")
+        .addEventListener("click", saveRename);
+
+    // Rename modal background click
+    document.getElementById("renameModal").addEventListener("click", (e) => {
+        if (e.target.id === "renameModal") {
+            closeRenameModal();
+        }
+    });
+
+    // Rename input enter key
+    document.getElementById("renameInput").addEventListener("keypress", (e) => {
+        if (e.key === "Enter") {
+            saveRename();
         }
     });
 
@@ -405,6 +451,15 @@ function attachFileCardListeners() {
             });
         }
 
+        // Rename button
+        const renameBtn = card.querySelector(".rename-btn");
+        if (renameBtn) {
+            renameBtn.addEventListener("click", (e) => {
+                e.stopPropagation();
+                openRenameDialog(fileId);
+            });
+        }
+
         // Save button
         const saveBtn = card.querySelector(".save-btn");
         if (saveBtn) {
@@ -514,6 +569,68 @@ async function saveTags() {
     }
 }
 
+// Open rename dialog
+function openRenameDialog(fileId) {
+    const file = allFiles.find((f) => f.id === fileId);
+    if (!file) return;
+
+    currentRenamingFile = file;
+    document.getElementById("renameInput").value = file.originalName;
+    document.getElementById("renameModal").classList.add("visible");
+    document.getElementById("renameInput").focus();
+    document.getElementById("renameInput").select();
+}
+
+// Close rename modal
+function closeRenameModal() {
+    document.getElementById("renameModal").classList.remove("visible");
+    currentRenamingFile = null;
+}
+
+// Save rename
+async function saveRename() {
+    if (!currentRenamingFile) return;
+
+    const newName = document.getElementById("renameInput").value.trim();
+
+    if (!newName) {
+        showNotification(
+            t("fileNameRequired") || "File name is required",
+            "warning"
+        );
+        return;
+    }
+
+    try {
+        const result = await window.electronAPI.renameFile(
+            currentRenamingFile.id,
+            newName
+        );
+        if (result.success) {
+            const fileIndex = allFiles.findIndex(
+                (f) => f.id === currentRenamingFile.id
+            );
+            if (fileIndex !== -1) {
+                allFiles[fileIndex].originalName = newName;
+            }
+            renderFiles();
+            closeRenameModal();
+            showNotification(
+                t("fileRenamedSuccess") || "File renamed successfully!",
+                "success"
+            );
+        } else {
+            showNotification(
+                "Failed to rename file: " + result.message,
+                "error"
+            );
+        }
+    } catch (error) {
+        console.error("Error renaming file:", error);
+        showNotification("Failed to rename file", "error");
+    }
+}
+
 // Render files
 function renderFiles() {
     const filesList = document.getElementById("filesList");
@@ -549,6 +666,14 @@ function renderFiles() {
               <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                 <path d="M20.59 13.41l-7.17 7.17a2 2 0 0 1-2.83 0L2 12V2h10l8.59 8.59a2 2 0 0 1 0 2.82z"/>
                 <line x1="7" y1="7" x2="7.01" y2="7"/>
+              </svg>
+            </button>
+            <button class="icon-btn rename-btn" data-file-id="${
+                file.id
+            }" title="Rename file">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/>
+                <path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/>
               </svg>
             </button>
             <button class="icon-btn save-btn" data-file-id="${

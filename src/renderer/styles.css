@@ -465,8 +465,11 @@ body {
     color: var(--text-primary);
 }
 
-.modal-close,
-.settings-modal-close {
+.tag-modal-close,
+.settings-modal-close,
+.rename-modal-close,
+.about-modal-close,
+.password-setup-modal-close {
     width: 32px;
     height: 32px;
     border: none;
@@ -480,14 +483,20 @@ body {
     transition: all 0.2s;
 }
 
-.modal-close:hover,
-.settings-modal-close:hover {
+.tag-modal-close:hover,
+.settings-modal-close:hover,
+.rename-modal-close:hover,
+.about-modal-close:hover,
+.password-setup-modal-close:hover {
     background: var(--bg-tertiary);
     color: var(--text-primary);
 }
 
-.modal-close svg,
-.settings-modal-close svg {
+.tag-modal-close svg,
+.settings-modal-close svg,
+.rename-modal-close svg,
+.about-modal-close svg,
+.password-setup-modal-close svg {
     width: 20px;
     height: 20px;
 }
@@ -886,7 +895,7 @@ body.light-theme {
     pointer-events: none;
 }
 
-.progress-modal .modal-close {
+.progress-modal .tag-modal-close {
     display: none;
 }
 
@@ -1051,6 +1060,12 @@ body.light-theme {
     color: var(--text-primary);
 }
 
+.password-input-wrapper {
+    position: relative;
+    display: flex;
+    align-items: center;
+}
+
 .form-input {
     width: 100%;
     padding: 10px 14px;
@@ -1060,6 +1075,36 @@ body.light-theme {
     color: var(--text-primary);
     font-size: 14px;
     transition: all 0.2s;
+}
+
+.password-input-wrapper .form-input {
+    padding-right: 45px;
+}
+
+.toggle-password-btn {
+    position: absolute;
+    right: 8px;
+    width: 32px;
+    height: 32px;
+    border: none;
+    background: transparent;
+    color: var(--text-muted);
+    cursor: pointer;
+    border-radius: 4px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: all 0.2s;
+}
+
+.toggle-password-btn:hover {
+    background: var(--bg-secondary);
+    color: var(--text-primary);
+}
+
+.toggle-password-btn svg {
+    width: 18px;
+    height: 18px;
 }
 
 .form-input:focus {

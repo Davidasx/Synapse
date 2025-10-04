@@ -9,6 +9,8 @@ contextBridge.exposeInMainWorld("electronAPI", {
     removeFile: (fileId) => ipcRenderer.invoke("remove-file", fileId),
     updateTags: (fileId, tags) =>
         ipcRenderer.invoke("update-tags", fileId, tags),
+    renameFile: (fileId, newName) =>
+        ipcRenderer.invoke("rename-file", fileId, newName),
     openFile: (fileId) => ipcRenderer.invoke("open-file", fileId),
     showInFolder: (fileId) => ipcRenderer.invoke("show-in-folder", fileId),
     saveFile: (fileId) => ipcRenderer.invoke("save-file", fileId),

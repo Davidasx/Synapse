@@ -592,6 +592,28 @@ ipcMain.handle("update-tags", async (event, fileId, tags) => {
     }
 });
 
+// Rename file (update originalName in metadata only)
+ipcMain.handle("rename-file", async (event, fileId, newName) => {
+    try {
+        const metadata = readMetadata();
+        const file = metadata.files.find((f) => f.id === fileId);
+
+        if (!file) {
+            return { success: false, message: "File not found" };
+        }
+
+        // Update only the originalName in metadata
+        // The stored encrypted file name remains unchanged
+        file.originalName = newName;
+        writeMetadata(metadata);
+
+        return { success: true, file };
+    } catch (error) {
+        console.error("Error renaming file:", error);
+        return { success: false, message: error.message };
+    }
+});
+
 // Open file
 ipcMain.handle("open-file", async (event, fileId) => {
     try {

@@ -94,5 +94,11 @@
     "aboutDescription": "Synapse is a smart and secure file management application that helps you organize, tag, and manage your files with frontier encryption. Your files are protected with AES-256-GCM encryption, ensuring your data remains private and secure.",
     "aboutSecurityDescription": "Your privacy is our top priority. All files are encrypted locally on your device before being stored. Only you have access to your encryption key, ensuring that your data remains completely private.",
     "aboutCopyright": "© 2025 DavidX. All rights reserved.",
-    "aboutMadeWith": "Made with Electron"
+    "aboutMadeWith": "Made with Electron",
+    "renameFile": "Rename File",
+    "newFileName": "New File Name",
+    "fileNamePlaceholder": "Enter new file name",
+    "rename": "Rename",
+    "fileRenamedSuccess": "File renamed successfully!",
+    "fileNameRequired": "File name is required"
 }

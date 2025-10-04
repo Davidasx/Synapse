@@ -94,5 +94,11 @@
     "aboutDescription": "Synapse 是一个安全的文件管理应用程序，可帮助您使用前沿加密技术来组织、标记和管理文件。您的文件受到 AES-256-GCM 加密的保护，确保您的数据保持私密和安全。",
     "aboutSecurityDescription": "您的隐私是我们的首要任务。所有文件在存储之前都会在您的设备上进行本地加密。只有您可以访问您的加密密钥，确保您的数据完全私密。",
     "aboutCopyright": "© 2025 DavidX. 版权所有。",
-    "aboutMadeWith": "由 Electron 制作"
+    "aboutMadeWith": "由 Electron 制作",
+    "renameFile": "重命名文件",
+    "newFileName": "新文件名",
+    "fileNamePlaceholder": "输入新文件名",
+    "rename": "重命名",
+    "fileRenamedSuccess": "文件重命名成功！",
+    "fileNameRequired": "文件名为必填项"
 }
