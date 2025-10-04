@@ -1317,3 +1317,94 @@ body.light-theme {
     width: 20px;
     height: 20px;
 }
+
+/* AI Settings Styles */
+.settings-input {
+    width: 100%;
+    padding: 10px 14px;
+    background: var(--bg-tertiary);
+    border: 1px solid var(--border-color);
+    border-radius: 8px;
+    color: var(--text-primary);
+    font-size: 14px;
+    transition: all 0.2s;
+}
+
+.settings-input:focus {
+    outline: none;
+    border-color: var(--primary-color);
+    background: var(--bg-secondary);
+}
+
+.settings-input::placeholder {
+    color: var(--text-muted);
+}
+
+/* Vertical settings item layout */
+.settings-item-vertical {
+    flex-direction: column;
+    align-items: stretch;
+    gap: 12px;
+}
+
+.settings-item-vertical .settings-item-info {
+    width: 100%;
+}
+
+.settings-item-vertical .password-input-wrapper,
+.settings-item-vertical .settings-input {
+    width: 100%;
+}
+
+/* Tag input container with Spark button */
+.tag-input-container {
+    display: flex;
+    gap: 10px;
+    align-items: center;
+    margin-bottom: 20px;
+}
+
+.tag-input {
+    flex: 1;
+}
+
+.btn-icon {
+    padding: 10px 16px;
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    white-space: nowrap;
+}
+
+.btn-icon svg {
+    width: 16px;
+    height: 16px;
+}
+
+.btn-small {
+    padding: 8px 16px;
+    font-size: 13px;
+}
+
+/* Loading spinner animation */
+@keyframes spin {
+    from {
+        transform: rotate(0deg);
+    }
+    to {
+        transform: rotate(360deg);
+    }
+}
+
+.spinner {
+    animation: spin 0.8s linear infinite;
+    display: inline-block;
+    width: 16px;
+    height: 16px;
+    flex-shrink: 0;
+}
+
+button:disabled {
+    opacity: 0.6;
+    cursor: not-allowed;
+}

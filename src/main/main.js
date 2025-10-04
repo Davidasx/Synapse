@@ -8,6 +8,8 @@ const path = require("path");
 const fs = require("fs");
 const crypto = require("crypto");
 const encryptionManager = require("./encryption");
+const { extractFileContent } = require("./file-content-reader");
+const { generateTags } = require("./ai-tagging");
 
 // Fixed settings path (always in userData)
 const SETTINGS_PATH = path.join(
@@ -32,6 +34,9 @@ const DEFAULT_SETTINGS = {
     theme: "dark",
     language: "en",
     storagePath: path.join(app.getPath("userData"), "synapse-data"),
+    aiApiEndpoint: "https://api.openai.com/v1",
+    aiApiKey: "",
+    aiModel: "gpt-4o-mini",
 };
 
 // Initialize storage paths from settings
@@ -1082,5 +1087,172 @@ ipcMain.handle("get-app-version", async () => {
     } catch (error) {
         console.error("Error getting app version:", error);
         return { success: false, message: error.message };
+    }
+});
+
+// AI Tagging handlers
+
+// Get file content for AI tagging
+ipcMain.handle("get-file-content", async (event, fileId) => {
+    try {
+        // Check if app is locked
+        if (encryptionManager.getStatus().isLocked) {
+            return {
+                success: false,
+                error: "App is locked. Please unlock first.",
+            };
+        }
+
+        const metadata = readMetadata();
+        const file = metadata.files.find((f) => f.id === fileId);
+
+        if (!file) {
+            return { success: false, error: "File not found" };
+        }
+
+        const storedFilePath = path.join(FILES_PATH, file.storedName);
+
+        if (!fs.existsSync(storedFilePath)) {
+            return { success: false, error: "File does not exist on disk" };
+        }
+
+        // Decrypt file content
+        let fileContent;
+        try {
+            const encryptedData = JSON.parse(
+                fs.readFileSync(storedFilePath, "utf8")
+            );
+            const decryptedContent =
+                encryptionManager.decryptContent(encryptedData);
+            fileContent = Buffer.from(decryptedContent, "base64");
+        } catch (decryptError) {
+            console.error("Error decrypting file:", decryptError);
+            return {
+                success: false,
+                error: "Failed to decrypt file. It may be corrupted.",
+            };
+        }
+
+        // Write to temp file for content extraction
+        const tempFilePath = path.join(
+            TEMP_PATH,
+            `temp_${file.id}${file.extension}`
+        );
+        fs.writeFileSync(tempFilePath, fileContent);
+
+        // Extract content based on file type
+        const contentResult = await extractFileContent(
+            tempFilePath,
+            file.format
+        );
+
+        // Clean up temp file
+        if (fs.existsSync(tempFilePath)) {
+            fs.unlinkSync(tempFilePath);
+        }
+
+        if (!contentResult.success) {
+            return {
+                success: false,
+                error: contentResult.error,
+            };
+        }
+
+        return {
+            success: true,
+            content: contentResult.content,
+            fileName: file.originalName,
+        };
+    } catch (error) {
+        console.error("Error getting file content:", error);
+        return { success: false, error: error.message };
+    }
+});
+
+// Generate AI tags for a file
+ipcMain.handle("generate-ai-tags", async (event, fileId) => {
+    try {
+        // Get file metadata
+        const metadata = readMetadata();
+        const file = metadata.files.find((f) => f.id === fileId);
+
+        if (!file) {
+            return { success: false, error: "File not found" };
+        }
+
+        // Check if app is locked
+        if (encryptionManager.getStatus().isLocked) {
+            return {
+                success: false,
+                error: "App is locked. Please unlock first.",
+            };
+        }
+
+        const storedFilePath = path.join(FILES_PATH, file.storedName);
+
+        if (!fs.existsSync(storedFilePath)) {
+            return { success: false, error: "File does not exist on disk" };
+        }
+
+        // Decrypt file content
+        let fileContent;
+        try {
+            const encryptedData = JSON.parse(
+                fs.readFileSync(storedFilePath, "utf8")
+            );
+            const decryptedContent =
+                encryptionManager.decryptContent(encryptedData);
+            fileContent = Buffer.from(decryptedContent, "base64");
+        } catch (decryptError) {
+            console.error("Error decrypting file:", decryptError);
+            return {
+                success: false,
+                error: "Failed to decrypt file. It may be corrupted.",
+            };
+        }
+
+        // Write to temp file for content extraction
+        const tempFilePath = path.join(
+            TEMP_PATH,
+            `temp_${file.id}${file.extension}`
+        );
+        fs.writeFileSync(tempFilePath, fileContent);
+
+        // Extract content based on file type
+        const extractResult = await extractFileContent(
+            tempFilePath,
+            file.format
+        );
+
+        // Clean up temp file
+        if (fs.existsSync(tempFilePath)) {
+            fs.unlinkSync(tempFilePath);
+        }
+
+        if (!extractResult.success) {
+            return {
+                success: false,
+                error: extractResult.error,
+            };
+        }
+
+        // Get AI settings
+        const aiSettings = {
+            apiEndpoint: currentSettings.aiApiEndpoint,
+            apiKey: currentSettings.aiApiKey,
+            model: currentSettings.aiModel,
+        };
+
+        // Generate tags using AI
+        const tagsResult = await generateTags(
+            file.originalName,
+            extractResult.content,
+            aiSettings
+        );
+
+        return tagsResult;
+    } catch (error) {
+        console.error("Error generating AI tags:", error);
+        return { success: false, error: error.message };
     }
 });

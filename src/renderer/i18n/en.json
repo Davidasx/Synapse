@@ -100,5 +100,20 @@
     "fileNamePlaceholder": "Enter new file name",
     "rename": "Rename",
     "fileRenamedSuccess": "File renamed successfully!",
-    "fileNameRequired": "File name is required"
+    "fileNameRequired": "File name is required",
+    "settingsAI": "AI Assistant",
+    "settingsAIEndpoint": "API Endpoint",
+    "settingsAIEndpointDesc": "OpenAI-compatible API endpoint URL",
+    "settingsAIModel": "Model",
+    "settingsAIModelDesc": "AI model to use for tagging (e.g., gpt-4o-mini, gpt-4o)",
+    "settingsAIKey": "API Key",
+    "settingsAIKeyDesc": "Your API key for the AI service",
+    "saveAISettings": "Save AI Settings",
+    "aiSettingsSaved": "AI settings saved successfully!",
+    "spark": "✨ AI",
+    "generateAITags": "Generate tags with AI",
+    "generatingTags": "Generating tags...",
+    "aiTagsGenerated": "AI tags generated successfully!",
+    "aiTagsError": "Failed to generate tags",
+    "aiNotConfigured": "AI is not configured. Please set API key in settings."
 }

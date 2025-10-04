@@ -230,6 +230,14 @@
                             class="tag-input"
                             data-i18n-placeholder="tagInputPlaceholder"
                         />
+                        <button
+                            id="sparkTagsBtn"
+                            class="btn btn-secondary btn-icon"
+                            title="Generate tags with AI"
+                            data-i18n-title="generateAITags"
+                        >
+                            <span data-i18n="spark"></span>
+                        </button>
                     </div>
 
                     <div id="tagsContainer" class="tags-container">
@@ -498,6 +506,124 @@
                                 class="btn btn-secondary btn-small"
                                 data-i18n="settingsSetPassword"
                             ></button>
+                        </div>
+                    </div>
+
+                    <!-- AI Settings Section -->
+                    <div class="settings-section">
+                        <h3 class="settings-section-title">
+                            <svg
+                                viewBox="0 0 24 24"
+                                fill="none"
+                                stroke="currentColor"
+                                stroke-width="2"
+                            >
+                                <path d="M12 2L2 7l10 5 10-5-10-5z" />
+                                <path d="M2 17l10 5 10-5" />
+                                <path d="M2 12l10 5 10-5" />
+                            </svg>
+                            <span data-i18n="settingsAI"></span>
+                        </h3>
+
+                        <div class="settings-item settings-item-vertical">
+                            <div class="settings-item-info">
+                                <div
+                                    class="settings-item-label"
+                                    data-i18n="settingsAIEndpoint"
+                                ></div>
+                                <div
+                                    class="settings-item-description"
+                                    data-i18n="settingsAIEndpointDesc"
+                                ></div>
+                            </div>
+                            <input
+                                type="text"
+                                id="aiEndpointInput"
+                                class="settings-input"
+                                placeholder="https://api.openai.com/v1"
+                            />
+                        </div>
+
+                        <div class="settings-item settings-item-vertical">
+                            <div class="settings-item-info">
+                                <div
+                                    class="settings-item-label"
+                                    data-i18n="settingsAIModel"
+                                ></div>
+                                <div
+                                    class="settings-item-description"
+                                    data-i18n="settingsAIModelDesc"
+                                ></div>
+                            </div>
+                            <input
+                                type="text"
+                                id="aiModelInput"
+                                class="settings-input"
+                                placeholder="gpt-4o-mini"
+                            />
+                        </div>
+
+                        <div class="settings-item settings-item-vertical">
+                            <div class="settings-item-info">
+                                <div
+                                    class="settings-item-label"
+                                    data-i18n="settingsAIKey"
+                                ></div>
+                                <div
+                                    class="settings-item-description"
+                                    data-i18n="settingsAIKeyDesc"
+                                ></div>
+                            </div>
+                            <div class="password-input-wrapper">
+                                <input
+                                    type="password"
+                                    id="aiKeyInput"
+                                    class="settings-input"
+                                    placeholder="sk-..."
+                                />
+                                <button
+                                    type="button"
+                                    class="toggle-password-btn"
+                                    data-target="aiKeyInput"
+                                    title="Toggle API key visibility"
+                                >
+                                    <svg
+                                        class="eye-icon"
+                                        viewBox="0 0 24 24"
+                                        fill="none"
+                                        stroke="currentColor"
+                                        stroke-width="2"
+                                    >
+                                        <path
+                                            d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"
+                                        />
+                                        <circle cx="12" cy="12" r="3" />
+                                    </svg>
+                                    <svg
+                                        class="eye-off-icon"
+                                        style="display: none"
+                                        viewBox="0 0 24 24"
+                                        fill="none"
+                                        stroke="currentColor"
+                                        stroke-width="2"
+                                    >
+                                        <path
+                                            d="M17.94 17.94A10.07 10.07 0 0 1 12 20c-7 0-11-8-11-8a18.45 18.45 0 0 1 5.06-5.94M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.16 3.19m-6.72-1.07a3 3 0 1 1-4.24-4.24"
+                                        />
+                                        <line x1="1" y1="1" x2="23" y2="23" />
+                                    </svg>
+                                </button>
+                            </div>
+                        </div>
+
+                        <div class="settings-item">
+                            <div class="settings-item-info">
+                                <button
+                                    id="saveAISettingsBtn"
+                                    class="btn btn-primary btn-small"
+                                    data-i18n="saveAISettings"
+                                ></button>
+                            </div>
                         </div>
                     </div>
                 </div>

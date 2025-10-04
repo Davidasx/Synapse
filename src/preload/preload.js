@@ -58,4 +58,8 @@ contextBridge.exposeInMainWorld("electronAPI", {
 
     // Get app version
     getAppVersion: () => ipcRenderer.invoke("get-app-version"),
+
+    // AI Tagging operations
+    getFileContent: (fileId) => ipcRenderer.invoke("get-file-content", fileId),
+    generateAITags: (fileId) => ipcRenderer.invoke("generate-ai-tags", fileId),
 });

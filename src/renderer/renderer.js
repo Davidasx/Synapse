@@ -233,6 +233,16 @@ function setupEventListeners() {
         .getElementById("changeStorageBtn")
         .addEventListener("click", changeStorageLocation);
 
+    // AI Settings button
+    document
+        .getElementById("saveAISettingsBtn")
+        .addEventListener("click", saveAISettings);
+
+    // Spark button (AI tagging)
+    document
+        .getElementById("sparkTagsBtn")
+        .addEventListener("click", generateAITags);
+
     // Password/Security buttons
     document
         .getElementById("changePasswordBtn")
@@ -526,7 +536,7 @@ function renderModalTags() {
             (tag) => `
     <div class="tag-item">
       ${escapeHtml(tag)}
-      <button class="tag-remove" onclick="removeTag('${escapeHtml(tag)}')">
+      <button class="tag-remove" data-tag="${escapeHtml(tag)}">
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
           <path d="M18 6L6 18M6 6l12 12"/>
         </svg>
@@ -535,6 +545,15 @@ function renderModalTags() {
   `
         )
         .join("");
+
+    // Add event listeners to tag remove buttons
+    container.querySelectorAll(".tag-remove").forEach((button) => {
+        button.addEventListener("click", (e) => {
+            e.stopPropagation();
+            const tag = button.getAttribute("data-tag");
+            removeTag(tag);
+        });
+    });
 }
 
 // Save tags
@@ -1088,6 +1107,14 @@ function updateSettingsUI() {
     // Update storage location display
     document.getElementById("storageLocationPath").textContent =
         currentSettings.storagePath || "Default location";
+
+    // Update AI settings
+    document.getElementById("aiEndpointInput").value =
+        currentSettings.aiApiEndpoint || "https://api.openai.com/v1";
+    document.getElementById("aiModelInput").value =
+        currentSettings.aiModel || "gpt-4o-mini";
+    document.getElementById("aiKeyInput").value =
+        currentSettings.aiApiKey || "";
 }
 
 // Set theme
@@ -1656,4 +1683,81 @@ async function lockApp() {
 function closeProgressModal() {
     const modal = document.getElementById("progressModal");
     modal.classList.remove("visible");
+}
+
+// AI Settings functions
+
+// Save AI settings
+async function saveAISettings() {
+    const aiEndpoint = document.getElementById("aiEndpointInput").value.trim();
+    const aiModel = document.getElementById("aiModelInput").value.trim();
+    const aiKey = document.getElementById("aiKeyInput").value.trim();
+
+    // Update current settings
+    currentSettings.aiApiEndpoint = aiEndpoint || "https://api.openai.com/v1";
+    currentSettings.aiModel = aiModel || "gpt-4o-mini";
+    currentSettings.aiApiKey = aiKey;
+
+    // Save to file
+    try {
+        await saveSettings();
+        showNotification(t("aiSettingsSaved"), "success");
+    } catch (error) {
+        console.error("Error saving AI settings:", error);
+        showNotification("Failed to save AI settings", "error");
+    }
+}
+
+// Generate AI tags for current file
+async function generateAITags() {
+    if (!currentEditingFile) {
+        showNotification("No file selected", "error");
+        return;
+    }
+
+    // Check if AI is configured
+    if (!currentSettings.aiApiKey) {
+        showNotification(t("aiNotConfigured"), "warning");
+        return;
+    }
+
+    // Disable button and show loading state
+    const sparkBtn = document.getElementById("sparkTagsBtn");
+    const originalContent = sparkBtn.innerHTML;
+    sparkBtn.disabled = true;
+    sparkBtn.innerHTML = `
+        <svg class="spinner" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <circle cx="12" cy="12" r="10" opacity="0.25"/>
+            <path d="M12 2a10 10 0 0 1 10 10" opacity="0.75"/>
+        </svg>
+        <span>${t("generatingTags")}</span>
+    `;
+
+    try {
+        // Call AI tagging API
+        const result = await window.electronAPI.generateAITags(
+            currentEditingFile.id
+        );
+
+        if (result.success && result.tags) {
+            // Add generated tags to current tags (avoid duplicates)
+            result.tags.forEach((tag) => {
+                if (!currentTags.includes(tag)) {
+                    currentTags.push(tag);
+                }
+            });
+
+            renderModalTags();
+            showNotification(t("aiTagsGenerated"), "success");
+        } else {
+            showNotification(result.error || t("aiTagsError"), "error");
+        }
+    } catch (error) {
+        console.error("Error generating AI tags:", error);
+        showNotification(t("aiTagsError"), "error");
+    } finally {
+        // Restore button
+        sparkBtn.disabled = false;
+        sparkBtn.innerHTML = originalContent;
+    }
 }

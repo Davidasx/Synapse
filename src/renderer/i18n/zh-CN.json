@@ -100,5 +100,20 @@
     "fileNamePlaceholder": "输入新文件名",
     "rename": "重命名",
     "fileRenamedSuccess": "文件重命名成功！",
-    "fileNameRequired": "文件名为必填项"
+    "fileNameRequired": "文件名为必填项",
+    "settingsAI": "AI 助手",
+    "settingsAIEndpoint": "API 端点",
+    "settingsAIEndpointDesc": "OpenAI 兼容的 API 端点地址",
+    "settingsAIModel": "模型",
+    "settingsAIModelDesc": "用于标记的 AI 模型（例如 gpt-4o-mini、gpt-4o）",
+    "settingsAIKey": "API 密钥",
+    "settingsAIKeyDesc": "您的 AI 服务 API 密钥",
+    "saveAISettings": "保存 AI 设置",
+    "aiSettingsSaved": "AI 设置保存成功！",
+    "spark": "✨ AI",
+    "generateAITags": "使用 AI 生成标签",
+    "generatingTags": "正在生成标签...",
+    "aiTagsGenerated": "AI 标签生成成功！",
+    "aiTagsError": "生成标签失败",
+    "aiNotConfigured": "AI 未配置。请在设置中设置 API 密钥。"
 }

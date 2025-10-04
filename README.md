@@ -1,3 +1,8 @@
+<div align="center">
+    <img src="https://raw.githubusercontent.com/Davidasx/Synapse/refs/heads/main/src/renderer/icon.svg" width="128" height="128" alt="Synapse Logo">
+</div>
+
+
 # Synapse
 
 A smart and privacy-first file management application built with Electron.
